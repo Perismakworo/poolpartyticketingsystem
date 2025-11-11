@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order #{{ order.id }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card">
+      <div class="page-heading">
+        <p>Reference {{ order.id }}</p>
+        <h1>Order Details</h1>
+      </div>
+
+      <table class="detail-grid">
+        <tr>
+          <td>Name</td>
+          <td>{{ order.buyer_name }}</td>
+        </tr>
+        <tr>
+          <td>Email</td>
+          <td>{{ order.buyer_email }}</td>
+        </tr>
+        <tr>
+          <td>Phone</td>
+          <td>{{ order.buyer_phone }}</td>
+        </tr>
+        <tr>
+          <td>Payment Method</td>
+          <td>{{ order.payment_method|capitalize }}</td>
+        </tr>
+        <tr>
+          <td>Payment Status</td>
+          <td>
+            <span class="status-pill {{ order.payment_status }}">
+              {{ order.payment_status|capitalize }}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td>Total Amount</td>
+          <td>{{ order.amount }} KES</td>
+        </tr>
+      </table>
+
+      <h2 class="section-title">Tickets</h2>
+      {% if order.tickets %}
+        <ul class="order-list">
+          {% for t in order.tickets %}
+            <li>
+              <strong>{{ t.ticket_type.event.name }} &mdash; {{ t.ticket_type.name }}</strong><br>
+              Code: <strong>{{ t.code }}</strong> |
+              <a href="{{ url_for('ticket_detail', code=t.code) }}">Open ticket</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="notice">
+          {% if order.payment_method == 'card' and order.payment_status == 'pending' %}
+            Complete your card payment to receive tickets instantly.
+          {% else %}
+            Tickets will appear here once payment is confirmed.
+          {% endif %}
+        </p>
+      {% endif %}
+
+      <div class="link-list">
+        <a class="button-link btn-secondary" href="{{ url_for('events') }}">Back to events</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

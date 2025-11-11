@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket {{ ticket.code }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card">
+      <div class="page-heading">
+        <p>Admission Ticket</p>
+        <h1>{{ ticket.ticket_type.event.name }}</h1>
+        <p>{{ ticket.ticket_type.name }} access</p>
+      </div>
+
+      <table class="detail-grid">
+        <tr>
+          <td>Ticket Type</td>
+          <td>{{ ticket.ticket_type.name }}</td>
+        </tr>
+        <tr>
+          <td>Code</td>
+          <td><strong>{{ ticket.code }}</strong></td>
+        </tr>
+        <tr>
+          <td>Status</td>
+          <td>{{ ticket.status|capitalize }}</td>
+        </tr>
+      </table>
+
+      {% if ticket.qr_path %}
+        <div class="qr-wrapper">
+          <img src="{{ ticket.qr_path }}" alt="QR Code for {{ ticket.code }}">
+          <p>Show this code at the entrance.</p>
+        </div>
+      {% endif %}
+
+      <p class="notice">Keep this ticket safe. A single scan admits one guest.</p>
+    </div>
+  </div>
+</body>
+</html>

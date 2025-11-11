@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Events</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="home-page">
+  <div class="page-shell">
+    <div class="page-card">
+      <div class="page-heading">
+        <p>Buy Ticket Here</p>
+        <h1>Pool Party</h1>
+      </div>
+
+      {% set hero = events[0] if events else None %}
+      <div class="poster-frame">
+        <img src="{{ url_for('static', filename='images/poolparty.jpg') }}" alt="Pool Party Poster">
+        <div class="poster-copy">
+          <div class="poster-inner">
+            <p class="poster-tag">Splash • Dance • Repeat</p>
+            <h2 class="poster-title">
+              Pool Party
+              <span>School Uniform Edition</span>
+            </h2>
+            <p class="poster-subtitle">
+              Splash, sip, and dance the night away! A live DJ, good vibes, great music, icy drinks, and delicious bites — all by the pool. Don’t just hear about it… be there! 💦🎶🍹
+            </p>
+            <ul class="poster-list">
+              <li>🔥 Live DJ Mashups </li>
+              <li>🍹 Drinks Available for purchase</li>
+              <li>🍔 Yummy food available for purchase</li>
+            </ul>
+            {% if hero %}
+              <div class="poster-meta">
+                <span class="poster-pill"><strong>Date</strong><span>{{ hero.start_time.strftime('%A, %d %B %Y') }}</span></span>
+                <span class="poster-pill"><strong>Time</strong><span>{{ hero.start_time.strftime('%I:%M %p') }} &ndash; {{ hero.end_time.strftime('%I:%M %p') }}</span></span>
+                <span class="poster-pill"><strong>Venue</strong><span>{{ hero.location }}</span></span>
+                <span class="poster-pill"><strong>Dress Code</strong><span>School Uniform Edition</span></span>
+              </div>
+              <div class="ticket-highlight">
+                <h3>VIP Splash Pass &mdash; KSh 1,500</h3>
+                <p>Fast-track entry plus a fresh pool towel and two premium drinks on the house.</p>
+                <ul>
+                  <li>Complimentary towel </li>
+                  <li>Complimentary Drink</li>
+                </ul>
+              </div>
+              <div class="ticket-highlight regular">
+                <h3>Regular Wave Pass &mdash; KSh 1,000</h3>
+                <p>Carry your own towel and grab drinks from the poolside bar at an affordable price.</p>
+                <ul>
+                  <li>Bring your towel</li>
+                    <li>Drinks will be available for purchase</li>
+                </ul>
+              </div>
+              <p class="ticket-notice">Strictly 18+ • Entry requires valid ID </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if hero %}
+        <div class="poster-cta">
+          <a class="button-link" href="{{ url_for('buy', event_id=hero.id) }}">Grab Tickets Here</a>
+        </div>
+      {% else %}
+        <p class="notice">New shows are brewing. Check back soon!</p>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

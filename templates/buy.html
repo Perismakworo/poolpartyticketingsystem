@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy Ticket - {{ event.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card purchase-card">
+      <section class="purchase-hero">
+        <div>
+          <p class="poster-tag">Checkout</p>
+          <h1>{{ event.name }}</h1>
+          <p>{{ event.description }}</p>
+        </div>
+        <div class="purchase-at-a-glance">
+          <div>
+            <span>Date</span>
+            <strong>{{ event.start_time.strftime('%A, %d %B %Y') }}</strong>
+          </div>
+          <div>
+            <span>Time</span>
+            <strong>{{ event.start_time.strftime('%I:%M %p') }} &ndash; {{ event.end_time.strftime('%I:%M %p') }}</strong>
+          </div>
+          <div>
+            <span>Venue</span>
+            <strong>{{ event.location }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="purchase-layout">
+        <div class="purchase-summary">
+          <h2>Ticket tiers</h2>
+          {% for tt in ticket_types %}
+            <div class="tier-card">
+              <div>
+                <strong>{{ tt.name }}</strong>
+                <p>{{ tt.total_quantity - tt.sold_quantity }} left</p>
+              </div>
+              <div class="price">KES {{ tt.price }}</div>
+            </div>
+          {% endfor %}
+          <p class="ticket-notice">Strictly 18+ • Carry your ID &amp; towel</p>
+        </div>
+
+        <form method="post" class="form-grid purchase-form">
+          <div>
+            <label for="ticket_type_id">Ticket Type</label>
+            <select id="ticket_type_id" name="ticket_type_id" required>
+              {% for tt in ticket_types %}
+                <option value="{{ tt.id }}">
+                  {{ tt.name }} &mdash; {{ tt.price }} KES
+                  ({{ tt.total_quantity - tt.sold_quantity }} left)
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="quantity">Quantity</label>
+            <input id="quantity" type="number" name="quantity" value="1" min="1" required>
+          </div>
+
+          <div>
+            <label for="name">Full Name</label>
+            <input id="name" type="text" name="name" required>
+          </div>
+
+          <div>
+            <label for="email">Email (for e-ticket)</label>
+            <input id="email" type="email" name="email" required>
+          </div>
+
+          <div>
+            <label for="phone">Phone (2547XXXXXXXX)</label>
+            <input id="phone" type="text" name="phone" required>
+          </div>
+
+          <div>
+            <label>Payment Method</label>
+            <div class="radio-stack">
+              <label><input type="radio" name="payment_method" value="mpesa" checked> M-Pesa (STK Push)</label>
+              <label><input type="radio" name="payment_method" value="card"> Card (Stripe Checkout)</label>
+            </div>
+          </div>
+
+          <div class="purchase-actions">
+            <button class="btn" type="submit">Pay &amp; Get Ticket</button>
+            <a class="button-link btn-secondary" href="{{ url_for('events') }}">Back to events</a>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

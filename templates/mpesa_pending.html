@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STK Push Sent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="page-shell">
+        <div class="page-card">
+            <div class="page-heading">
+                <p>M-Pesa in progress</p>
+                <h1>STK Push Sent</h1>
+                <p>Approve the prompt on your phone to finish payment.</p>
+            </div>
+
+            <ol>
+                <li>Check your phone for the M-Pesa prompt.</li>
+                <li>Enter your PIN to approve the payment.</li>
+                <li>Tap the button below to let us verify instantly.</li>
+            </ol>
+
+            <div class="link-list">
+                <a class="button-link" href="{{ url_for('mpesa_check', order_id=order.id) }}">✅ I have paid &mdash; check status</a>
+                <a class="button-link btn-secondary" href="{{ url_for('order_detail', order_id=order.id) }}">View order timeline</a>
+            </div>
+
+            <p class="notice">It may take up to a minute for M-Pesa to confirm.</p>
+        </div>
+    </div>
+</body>
+</html>

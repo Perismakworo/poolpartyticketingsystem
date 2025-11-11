@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validate Ticket</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card">
+      <div class="page-heading">
+        <p>Security Desk</p>
+        <h1>Validate Ticket</h1>
+      </div>
+
+      <form method="post" class="form-grid">
+        <div>
+          <label for="code">Ticket Code</label>
+          <input id="code" type="text" name="code" placeholder="Enter code e.g. BRIT001" required>
+        </div>
+        <div>
+          <button class="btn" type="submit">Check</button>
+        </div>
+      </form>
+
+      {% if result %}
+        <p class="notice">{{ result }}</p>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
