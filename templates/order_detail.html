@@ -43,6 +43,10 @@
           <td>Total Amount</td>
           <td>{{ order.amount }} KES</td>
         </tr>
+        <tr>
+          <td>M-Pesa Code</td>
+          <td>{{ order.mpesa_code or 'Awaiting submission' }}</td>
+        </tr>
       </table>
 
       <h2 class="section-title">Tickets</h2>
@@ -58,12 +62,24 @@
         </ul>
       {% else %}
         <p class="notice">
-          {% if order.payment_method == 'card' and order.payment_status == 'pending' %}
-            Complete your card payment to receive tickets instantly.
+          {% if order.payment_status == 'pending' %}
+            We are verifying your M-Pesa payment. As soon as it is marked paid,
+            your e-ticket and QR code will appear here and be emailed to you.
           {% else %}
             Tickets will appear here once payment is confirmed.
           {% endif %}
         </p>
+        {% if order.payment_status == 'pending' %}
+          <form class="form-grid" method="post" action="{{ url_for('submit_mpesa_code', order_id=order.id) }}">
+            <div>
+              <label for="mpesa_code">Update M-Pesa Confirmation Code</label>
+              <input id="mpesa_code" type="text" name="mpesa_code" placeholder="e.g. QBC1XXXXXX" required value="{{ order.mpesa_code }}">
+            </div>
+            <div>
+              <button class="btn" type="submit">Submit Code</button>
+            </div>
+          </form>
+        {% endif %}
       {% endif %}
 
       <div class="link-list">

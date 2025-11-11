@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Submitted</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card">
+      <div class="page-heading">
+        <p>Order #{{ order.id }}</p>
+        <h1>Thanks for your payment</h1>
+        <p>We are reviewing your M-Pesa confirmation.</p>
+      </div>
+
+      <table class="detail-grid">
+        <tr>
+          <td>Amount</td>
+          <td>KES {{ order.amount }}</td>
+        </tr>
+        <tr>
+          <td>Paybill / Till</td>
+          <td>{{ paybill_number }} ({{ pay_name }})</td>
+        </tr>
+        <tr>
+          <td>Account Number</td>
+          <td>{{ account_number }}</td>
+        </tr>
+        <tr>
+          <td>Reference</td>
+          <td>Use “{{ event.name }}” or Order ID {{ order.id }}</td>
+        </tr>
+        <tr>
+          <td>M-Pesa Code</td>
+          <td>{{ order.mpesa_code or 'Provided later' }}</td>
+        </tr>
+      </table>
+
+      <p class="notice">
+        Your payment will be verified manually. Once confirmed, your e-ticket and QR code
+        will be emailed to {{ order.buyer_email }}.
+      </p>
+
+      <form class="form-grid" method="post" action="{{ url_for('submit_mpesa_code', order_id=order.id) }}">
+        <div>
+          <label for="mpesa_code">Submit M-Pesa Confirmation Code</label>
+          <input id="mpesa_code" type="text" name="mpesa_code" placeholder="e.g. QBC1XXXXXX" required>
+        </div>
+        <div>
+          <button class="btn" type="submit">Send Code</button>
+        </div>
+      </form>
+
+      <div class="link-list">
+        <a class="button-link btn-secondary" href="{{ url_for('events') }}">Back to events</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

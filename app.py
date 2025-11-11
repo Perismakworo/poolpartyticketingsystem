@@ -1,9 +1,6 @@
 import os
-import base64
 import secrets
 import qrcode
-import stripe
-import requests
 
 from datetime import datetime
 from flask import (
@@ -38,26 +35,10 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get(
 )
 mail = Mail(app)
 
-# ---------- M-PESA DARAJA CONFIG ----------
-# For sandbox:
-#   MPESA_BASE_URL=https://sandbox.safaricom.co.ke
-#   MPESA_SHORTCODE=522533 (or 174379 depending on docs)
-# For live:
-#   MPESA_BASE_URL=https://api.safaricom.co.ke
-#   MPESA_SHORTCODE=<hotel_paybill>
-#   plus live PASSKEY/KEY/SECRET
-
-MPESA_BASE_URL = os.environ.get("MPESA_BASE_URL", "https://sandbox.safaricom.co.ke")
-MPESA_SHORTCODE = os.environ.get("MPESA_SHORTCODE", "522533")
-MPESA_PASSKEY = os.environ.get("MPESA_PASSKEY")
-MPESA_CONSUMER_KEY = os.environ.get("MPESA_CONSUMER_KEY")
-MPESA_CONSUMER_SECRET = os.environ.get("MPESA_CONSUMER_SECRET")
-MPESA_CALLBACK_URL = os.environ.get("MPESA_CALLBACK_URL", "https://example.com/mpesa/callback")
-
-# ---------- STRIPE CONFIG (CARD, OPTIONAL) ----------
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
-stripe.api_key = STRIPE_SECRET_KEY
+# ---------- MANUAL PAYMENT CONFIG ----------
+MANUAL_PAYBILL_NUMBER = os.environ.get("MANUAL_PAYBILL_NUMBER", "522533")
+MANUAL_PAY_NAME = os.environ.get("MANUAL_PAY_NAME", "Mtwapa Greenyard Resort")
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "set-a-secure-token")
 
 db = SQLAlchemy(app)
 
@@ -88,8 +69,9 @@ class Order(db.Model):
     buyer_name = db.Column(db.String(100), nullable=False)
     buyer_email = db.Column(db.String(120), nullable=False)
     buyer_phone = db.Column(db.String(20), nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)  # 'mpesa' or 'card'
+    payment_method = db.Column(db.String(50), nullable=False)  # 'mpesa_manual'
     payment_status = db.Column(db.String(20), default='pending')  # 'pending','paid','failed'
+    mpesa_code = db.Column(db.String(40), nullable=True)
     amount = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -182,89 +164,6 @@ def issue_tickets(order: Order, ticket_type: TicketType, quantity: int):
     except Exception as e:
         print("Email error:", e)
 
-# ================== M-PESA HELPERS ==================
-
-def get_mpesa_access_token():
-    resp = requests.get(
-        f"{MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials",
-        auth=(MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET),
-        timeout=10
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    return data.get('access_token')
-
-def initiate_mpesa_stk(phone_number: str, amount: int, order_id: int):
-    """Initiate STK push and return CheckoutRequestID if accepted."""
-    access_token = get_mpesa_access_token()
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-
-    password_raw = f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{timestamp}"
-    password = base64.b64encode(password_raw.encode()).decode()
-
-    url = f"{MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "BusinessShortCode": MPESA_SHORTCODE,
-        "Password": password,
-        "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline",
-        "Amount": amount,
-        "PartyA": phone_number,
-        "PartyB": MPESA_SHORTCODE,
-        "PhoneNumber": phone_number,
-        "CallBackURL": MPESA_CALLBACK_URL,
-        "AccountReference": f"ORDER{order_id}",
-        "TransactionDesc": "Event Ticket Payment"
-    }
-
-    resp = requests.post(url, json=payload, headers=headers, timeout=10)
-    try:
-        data = resp.json()
-    except Exception:
-        data = {}
-
-    print("M-Pesa STK raw response:", resp.status_code, data)
-
-    if resp.status_code == 200 and str(data.get("ResponseCode")) == "0":
-        return data.get("CheckoutRequestID")
-    return None
-
-def query_mpesa_stk(checkout_request_id: str):
-    """Use STK Query API to confirm payment status."""
-    access_token = get_mpesa_access_token()
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-
-    password_raw = f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{timestamp}"
-    password = base64.b64encode(password_raw.encode()).decode()
-
-    url = f"{MPESA_BASE_URL}/mpesa/stkpushquery/v1/query"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "BusinessShortCode": MPESA_SHORTCODE,
-        "Password": password,
-        "Timestamp": timestamp,
-        "CheckoutRequestID": checkout_request_id
-    }
-
-    resp = requests.post(url, json=payload, headers=headers, timeout=10)
-    try:
-        data = resp.json()
-    except Exception:
-        data = {}
-
-    print("M-Pesa STK Query response:", resp.status_code, data)
-
-    if resp.status_code == 200 and str(data.get("ResultCode")) == "0":
-        return True
-    return False
-
 # ================== DB SETUP ==================
 
 def setup_db():
@@ -280,8 +179,8 @@ def setup_db():
         db.session.add(e)
         db.session.commit()
 
-        tt1 = TicketType(event_id=e.id, name='Regular', price=1000, total_quantity=70)
-        tt2 = TicketType(event_id=e.id, name='VIP', price=1500, total_quantity=250)
+        tt1 = TicketType(event_id=e.id, name='Regular', price=1000, total_quantity=200)
+        tt2 = TicketType(event_id=e.id, name='VIP', price=1500, total_quantity=100)
         db.session.add_all([tt1, tt2])
         db.session.commit()
 
@@ -303,7 +202,8 @@ def buy(event_id):
         name = request.form['name'].strip()
         email = request.form['email'].strip()
         phone = request.form['phone'].strip()
-        payment_method = request.form['payment_method']  # 'mpesa' or 'card'
+        payment_method = 'mpesa_manual'
+        mpesa_code = request.form.get('mpesa_code', '').strip().upper()
 
         tt = TicketType.query.get_or_404(ticket_type_id)
 
@@ -322,146 +222,47 @@ def buy(event_id):
             payment_status='pending',
             amount=amount,
             ticket_type_id=tt.id,
-            quantity=quantity
+            quantity=quantity,
+            mpesa_code=mpesa_code or None
         )
         db.session.add(order)
         db.session.commit()
 
-        # ----- M-Pesa -----
-        if payment_method == 'mpesa':
-            try:
-                checkout_id = initiate_mpesa_stk(phone, amount, order.id)
-            except Exception as e:
-                print("M-Pesa STK error:", e)
-                order.payment_status = 'failed'
-                db.session.commit()
-                return "Failed to initiate M-Pesa STK.", 400
-
-            if not checkout_id:
-                order.payment_status = 'failed'
-                db.session.commit()
-                return "M-Pesa STK was not accepted. Try again.", 400
-
-            order.mpesa_checkout_request_id = checkout_id
-            db.session.commit()
-            return render_template('mpesa_pending.html', order=order)
-
-        # ----- Card (Stripe Checkout) -----
-        elif payment_method == 'card':
-            try:
-                # Charge in KES (smallest unit)
-                currency = 'kes'
-                unit_amount = tt.price * 100
-
-                checkout_session = stripe.checkout.Session.create(
-                    payment_method_types=['card'],
-                    mode='payment',
-                    line_items=[{
-                        'price_data': {
-                            'currency': currency,
-                            'product_data': {
-                                'name': f"{event.name} - {tt.name} Ticket"
-                            },
-                            'unit_amount': unit_amount,
-                        },
-                        'quantity': quantity,
-                    }],
-                    success_url=url_for(
-                        'card_success', order_id=order.id, _external=True
-                    ) + '?session_id={CHECKOUT_SESSION_ID}',
-                    cancel_url=url_for(
-                        'card_cancel', order_id=order.id, _external=True
-                    ),
-                )
-            except Exception as e:
-                print("Stripe error:", e)
-                order.payment_status = 'failed'
-                db.session.commit()
-                return "Failed to start card payment.", 400
-
-            order.stripe_session_id = checkout_session['id']
-            db.session.commit()
-            return redirect(checkout_session.url, code=303)
-
-        else:
-            order.payment_status = 'failed'
-            db.session.commit()
-            return "Unknown payment method.", 400
-
-    return render_template('buy.html', event=event, ticket_types=ticket_types)
-
-# ---------- Stripe: success / cancel ----------
-
-@app.route('/card/success/<int:order_id>')
-def card_success(order_id):
-    order = Order.query.get_or_404(order_id)
-    session_id = request.args.get('session_id')
-
-    if not session_id or order.stripe_session_id != session_id:
-        return "Invalid session.", 400
-
-    try:
-        session = stripe.checkout.Session.retrieve(session_id)
-    except Exception as e:
-        print("Stripe retrieve error:", e)
-        return "Could not verify payment.", 400
-
-    if session.payment_status == 'paid':
-        if order.payment_status != 'paid':
-            order.payment_status = 'paid'
-            db.session.commit()
-            tt = TicketType.query.get(order.ticket_type_id)
-            if tt and order.quantity:
-                issue_tickets(order, tt, order.quantity)
-    else:
-        order.payment_status = 'failed'
-        db.session.commit()
-        return "Payment not completed.", 400
-
-    return redirect(url_for('order_detail', order_id=order.id))
-
-@app.route('/card/cancel/<int:order_id>')
-def card_cancel(order_id):
-    order = Order.query.get_or_404(order_id)
-    if order.payment_status != 'paid':
-        order.payment_status = 'failed'
-        db.session.commit()
-    return "Card payment cancelled. No ticket generated."
-
-# ---------- M-Pesa: manual check with STK Query ----------
-
-@app.route('/mpesa/check/<int:order_id>')
-def mpesa_check(order_id):
-    order = Order.query.get_or_404(order_id)
-
-    if not order.mpesa_checkout_request_id:
-        return "No M-Pesa request found for this order.", 400
-
-    if order.payment_status == 'paid':
-        return redirect(url_for('order_detail', order_id=order.id))
-
-    try:
-        success = query_mpesa_stk(order.mpesa_checkout_request_id)
-    except Exception as e:
-        print("M-Pesa STK Query error:", e)
-        return "Could not verify M-Pesa payment. Try again.", 400
-
-    if not success:
-        return (
-            "M-Pesa payment not confirmed yet. "
-            "If money was deducted, wait a bit then click 'Check payment' again. "
-            "No ticket has been generated.",
-            400
+        return render_template(
+            'mpesa_manual_pending.html',
+            order=order,
+            event=event,
+            paybill_number=MANUAL_PAYBILL_NUMBER,
+            pay_name=MANUAL_PAY_NAME
         )
+
+    return render_template(
+        'buy.html',
+        event=event,
+        ticket_types=ticket_types,
+        paybill_number=MANUAL_PAYBILL_NUMBER,
+        pay_name=MANUAL_PAY_NAME
+    )
+
+@app.route('/admin/mark_paid/<int:order_id>')
+def admin_mark_paid(order_id):
+    token = request.args.get('token')
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return "Forbidden", 403
+
+    order = Order.query.get_or_404(order_id)
+    if order.payment_status == 'paid':
+        return f"Order {order.id} already marked as paid.", 200
 
     order.payment_status = 'paid'
     db.session.commit()
 
-    tt = TicketType.query.get(order.ticket_type_id)
-    if tt and order.quantity:
-        issue_tickets(order, tt, order.quantity)
+    ticket_type = TicketType.query.get(order.ticket_type_id)
+    if not ticket_type or not order.quantity:
+        return "Ticket type information missing. Cannot issue tickets.", 400
 
-    return redirect(url_for('order_detail', order_id=order.id))
+    issue_tickets(order, ticket_type, order.quantity)
+    return f"Order {order.id} marked as paid and {order.quantity} ticket(s) issued.", 200
 
 # ---------- Views ----------
 

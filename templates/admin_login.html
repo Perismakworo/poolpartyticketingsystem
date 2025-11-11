@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card" style="max-width:420px;margin:0 auto;">
+      <div class="page-heading">
+        <p>Restricted Area</p>
+        <h1>Admin Login</h1>
+      </div>
+      <form class="form-grid" method="post">
+        <div>
+          <label for="username">Username</label>
+          <input id="username" type="text" name="username" required>
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" required>
+        </div>
+        <div>
+          <button class="btn" type="submit">Sign In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

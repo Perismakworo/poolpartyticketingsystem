@@ -2,7 +2,7 @@ Flask
 Flask_SQLAlchemy
 Flask-Mail
 qrcode
-stripe
-requests
 gunicorn
 python-dotenv
+Flask-WTF
+reportlab

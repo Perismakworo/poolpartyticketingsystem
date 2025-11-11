@@ -43,7 +43,9 @@
               <div class="price">KES {{ tt.price }}</div>
             </div>
           {% endfor %}
-          <p class="ticket-notice">Strictly 18+ • Carry your ID &amp; towel</p>
+          <p class="ticket-notice">
+            Paybill: {{ paybill_number }} | Account: {{ account_number }} ({{ pay_name }}) • Strictly 18+ • Carry your ID &amp; towel
+          </p>
         </div>
 
         <form method="post" class="form-grid purchase-form">
@@ -79,16 +81,13 @@
             <input id="phone" type="text" name="phone" required>
           </div>
 
-          <div>
-            <label>Payment Method</label>
-            <div class="radio-stack">
-              <label><input type="radio" name="payment_method" value="mpesa" checked> M-Pesa (STK Push)</label>
-              <label><input type="radio" name="payment_method" value="card"> Card (Stripe Checkout)</label>
-            </div>
-          </div>
+          <p class="purchase-note">
+            Pay the total amount to Paybill {{ paybill_number }}, Account {{ account_number }} ({{ pay_name }}).
+            Use “{{ event.name }}” or your Order ID (visible after submitting) as the payment reference, then submit the M-Pesa confirmation code on the next screen once you receive it.
+          </p>
 
           <div class="purchase-actions">
-            <button class="btn" type="submit">Pay &amp; Get Ticket</button>
+            <button class="btn" type="submit">Submit Payment Details</button>
             <a class="button-link btn-secondary" href="{{ url_for('events') }}">Back to events</a>
           </div>
         </form>

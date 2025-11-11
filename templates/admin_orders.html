@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Orders</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-card">
+      <div class="page-heading">
+        <p>Paybill {{ paybill_number }} • Account {{ account_number }}</p>
+        <h1>Admin – Orders ({{ status|capitalize }})</h1>
+        <p>Verify incoming M-Pesa deposits against the statement before marking an order paid.</p>
+      </div>
+
+      <div class="link-list">
+        <a class="button-link {% if status == 'pending' %}{% else %}btn-secondary{% endif %}"
+           href="{{ url_for('admin_orders', status='pending') }}">Pending</a>
+        <a class="button-link {% if status == 'paid' %}{% else %}btn-secondary{% endif %}"
+           href="{{ url_for('admin_orders', status='paid') }}">Paid</a>
+        <a class="button-link btn-secondary" href="{{ url_for('admin_logout') }}">Logout</a>
+      </div>
+
+      {% if orders %}
+        <div class="table-scroll">
+          <table class="detail-grid admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Buyer</th>
+                <th>Amount</th>
+                <th>Ticket</th>
+                <th>Phone</th>
+                <th>M-Pesa Code</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in orders %}
+                <tr>
+                  <td>{{ o.id }}</td>
+                  <td>
+                    {{ o.buyer_name }}<br>
+                    <small>{{ o.buyer_email }}</small>
+                  </td>
+                  <td>KES {{ o.amount }}</td>
+                  <td>{{ o.ticket_type.name if o.ticket_type else '' }}</td>
+                  <td>{{ o.buyer_phone }}</td>
+                  <td>{{ o.mpesa_code or 'Awaiting code' }}</td>
+                  <td>{{ o.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                  <td>
+                    <a class="button-link btn-secondary" href="{{ url_for('order_detail', order_id=o.id) }}">View</a>
+                    {% if o.payment_status != 'paid' %}
+                      <a class="button-link"
+                         href="{{ url_for('admin_mark_paid', order_id=o.id, next=url_for('admin_orders', status=status)) }}">
+                        Mark Paid
+                      </a>
+                      <form method="post" action="{{ url_for('admin_mark_failed', order_id=o.id) }}" style="display:inline;">
+                        <button class="button-link btn-secondary" type="submit">Flag Not Paid</button>
+                      </form>
+                    {% else %}
+                      <a class="button-link" href="{{ url_for('admin_download_tickets', order_id=o.id) }}">Download Tickets</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="notice">No orders match this filter.</p>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

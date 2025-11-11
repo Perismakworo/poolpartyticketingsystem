@@ -7,37 +7,36 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="page-shell">
-    <div class="page-card">
-      <div class="page-heading">
+  <div class="ticket-shell">
+    <div class="ticket-card">
+      <div class="ticket-header">
         <p>Admission Ticket</p>
         <h1>{{ ticket.ticket_type.event.name }}</h1>
-        <p>{{ ticket.ticket_type.name }} access</p>
+        <span class="badge">{{ ticket.ticket_type.name }} Access</span>
       </div>
 
-      <table class="detail-grid">
-        <tr>
-          <td>Ticket Type</td>
-          <td>{{ ticket.ticket_type.name }}</td>
-        </tr>
-        <tr>
-          <td>Code</td>
-          <td><strong>{{ ticket.code }}</strong></td>
-        </tr>
-        <tr>
-          <td>Status</td>
-          <td>{{ ticket.status|capitalize }}</td>
-        </tr>
-      </table>
+      <div class="ticket-body">
+        <div class="ticket-info">
+          <p class="ticket-label">Ticket ID</p>
+          <p class="ticket-value">{{ ticket.code }}</p>
+        </div>
+        <div class="ticket-info">
+          <p class="ticket-label">Status</p>
+          <p class="ticket-value">{{ ticket.status|capitalize }}</p>
+        </div>
+      </div>
 
       {% if ticket.qr_path %}
-        <div class="qr-wrapper">
+        <div class="ticket-qr">
           <img src="{{ ticket.qr_path }}" alt="QR Code for {{ ticket.code }}">
           <p>Show this code at the entrance.</p>
         </div>
       {% endif %}
 
-      <p class="notice">Keep this ticket safe. A single scan admits one guest.</p>
+      <div class="ticket-actions">
+        <a class="button-link" href="{{ url_for('download_ticket', code=ticket.code) }}">Download Ticket</a>
+        <a class="button-link btn-secondary" href="{{ url_for('events') }}">Back to events</a>
+      </div>
     </div>
   </div>
 </body>

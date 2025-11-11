@@ -407,6 +407,106 @@ body.home-page::before {
   justify-content: center;
 }
 
+.purchase-note {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ticket-shell {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.ticket-card {
+  width: min(520px, 100%);
+  background: radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 60%),
+              rgba(2, 22, 40, 0.85);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 45px rgba(3, 8, 20, 0.5);
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.ticket-header h1 {
+  margin: 0.3rem 0;
+  font-size: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ticket-header .badge {
+  display: inline-block;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+}
+
+.ticket-body {
+  display: flex;
+  justify-content: space-around;
+  margin: 2rem 0;
+  gap: 1rem;
+}
+
+.ticket-info .ticket-label {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ticket-info .ticket-value {
+  font-size: 1.4rem;
+  margin: 0.4rem 0 0;
+  letter-spacing: 0.1em;
+}
+
+.ticket-qr {
+  margin-top: 1rem;
+}
+
+.ticket-qr img {
+  width: 220px;
+  height: 220px;
+  border-radius: 20px;
+  padding: 1rem;
+  background: rgba(0,0,0,0.15);
+}
+
+.ticket-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.admin-table thead {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 @media (max-width: 900px) {
   .purchase-layout {
     grid-template-columns: 1fr;
