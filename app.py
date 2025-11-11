@@ -12,52 +12,51 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
+from dotenv import load_dotenv
+
+# ================== LOAD ENV ==================
+# Reads values from .env into environment variables in development
+load_dotenv()
 
 # ================== FLASK APP CONFIG ==================
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'tickets.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # ---------- EMAIL CONFIG ----------
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'mtwapagreenyardr@gmail.com'
-app.config['MAIL_PASSWORD'] = 'hxdwybadznqorjus'   # Gmail App Password
-app.config['MAIL_DEFAULT_SENDER'] = ('Event Tickets', app.config['MAIL_USERNAME'])
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get(
+    'MAIL_DEFAULT_SENDER',
+    f"Event Tickets <{app.config['MAIL_USERNAME']}>" if app.config.get('MAIL_USERNAME') else None
+)
 mail = Mail(app)
 
 # ---------- M-PESA DARAJA CONFIG ----------
+# For sandbox:
+#   MPESA_BASE_URL=https://sandbox.safaricom.co.ke
+#   MPESA_SHORTCODE=522533 (or 174379 depending on docs)
+# For live:
+#   MPESA_BASE_URL=https://api.safaricom.co.ke
+#   MPESA_SHORTCODE=<hotel_paybill>
+#   plus live PASSKEY/KEY/SECRET
+
 MPESA_BASE_URL = os.environ.get("MPESA_BASE_URL", "https://sandbox.safaricom.co.ke")
 MPESA_SHORTCODE = os.environ.get("MPESA_SHORTCODE", "522533")
-MPESA_PASSKEY = os.environ.get(
-    "MPESA_PASSKEY",
-    "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
-)
-MPESA_CONSUMER_KEY = os.environ.get(
-    "MPESA_CONSUMER_KEY",
-    "k9lTB3WN8GxlNjimgsAGhGiO3qVB3emDXf0FVBxS7r13aZvl"
-)
-MPESA_CONSUMER_SECRET = os.environ.get(
-    "MPESA_CONSUMER_SECRET",
-    "d2lhUKP7AkeCLVAFPCa7xeG7scn01fdbMaL2IwifE24oBWrLOkCQzWuL8GQxjU3y"
-)
-MPESA_CALLBACK_URL = os.environ.get(
-    "MPESA_CALLBACK_URL",
-    "https://example.com/mpesa/callback"
-)
+MPESA_PASSKEY = os.environ.get("MPESA_PASSKEY")
+MPESA_CONSUMER_KEY = os.environ.get("MPESA_CONSUMER_KEY")
+MPESA_CONSUMER_SECRET = os.environ.get("MPESA_CONSUMER_SECRET")
+MPESA_CALLBACK_URL = os.environ.get("MPESA_CALLBACK_URL", "https://example.com/mpesa/callback")
 
-# ---------- STRIPE CONFIG (CARD) ----------
-STRIPE_SECRET_KEY = os.environ.get(
-    "STRIPE_SECRET_KEY",
-    "stripe_secret_placeholder"
-)
-STRIPE_PUBLISHABLE_KEY = os.environ.get(
-    "STRIPE_PUBLISHABLE_KEY",
-    "stripe_publishable_placeholder"
-)
+# ---------- STRIPE CONFIG (CARD, OPTIONAL) ----------
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 stripe.api_key = STRIPE_SECRET_KEY
 
 db = SQLAlchemy(app)
@@ -94,6 +93,7 @@ class Order(db.Model):
     amount = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # saved so we can create tickets AFTER payment confirmed
     ticket_type_id = db.Column(db.Integer, nullable=True)
     quantity = db.Column(db.Integer, nullable=True)
     stripe_session_id = db.Column(db.String(255), nullable=True)
@@ -164,7 +164,7 @@ def send_ticket_email(order: Order):
 def issue_tickets(order: Order, ticket_type: TicketType, quantity: int):
     """Create tickets ONLY when payment is confirmed."""
     if order.tickets:
-        return
+        return  # already issued
     for _ in range(quantity):
         code = generate_ticket_code()
         qr_path = generate_qr(code)
@@ -182,7 +182,7 @@ def issue_tickets(order: Order, ticket_type: TicketType, quantity: int):
     except Exception as e:
         print("Email error:", e)
 
-# ---------- M-Pesa helpers ----------
+# ================== M-PESA HELPERS ==================
 
 def get_mpesa_access_token():
     resp = requests.get(
@@ -191,15 +191,16 @@ def get_mpesa_access_token():
         timeout=10
     )
     resp.raise_for_status()
-    return resp.json().get('access_token')
+    data = resp.json()
+    return data.get('access_token')
 
 def initiate_mpesa_stk(phone_number: str, amount: int, order_id: int):
     """Initiate STK push and return CheckoutRequestID if accepted."""
     access_token = get_mpesa_access_token()
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    password = base64.b64encode(
-        (MPESA_SHORTCODE + MPESA_PASSKEY + timestamp).encode()
-    ).decode()
+
+    password_raw = f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{timestamp}"
+    password = base64.b64encode(password_raw.encode()).decode()
 
     url = f"{MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest"
     headers = {
@@ -236,9 +237,9 @@ def query_mpesa_stk(checkout_request_id: str):
     """Use STK Query API to confirm payment status."""
     access_token = get_mpesa_access_token()
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    password = base64.b64encode(
-        (MPESA_SHORTCODE + MPESA_PASSKEY + timestamp).encode()
-    ).decode()
+
+    password_raw = f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{timestamp}"
+    password = base64.b64encode(password_raw.encode()).decode()
 
     url = f"{MPESA_BASE_URL}/mpesa/stkpushquery/v1/query"
     headers = {
@@ -278,6 +279,7 @@ def setup_db():
         )
         db.session.add(e)
         db.session.commit()
+
         tt1 = TicketType(event_id=e.id, name='Regular', price=100, total_quantity=70)
         tt2 = TicketType(event_id=e.id, name='VIP', price=1500, total_quantity=250)
         db.session.add_all([tt1, tt2])
@@ -347,9 +349,9 @@ def buy(event_id):
         # ----- Card (Stripe Checkout) -----
         elif payment_method == 'card':
             try:
-                # Charge in KES (Stripe uses smallest unit)
+                # Charge in KES (smallest unit)
                 currency = 'kes'
-                unit_amount = tt.price * 100  # 500 KES -> 50000
+                unit_amount = tt.price * 100
 
                 checkout_session = stripe.checkout.Session.create(
                     payment_method_types=['card'],
@@ -493,7 +495,9 @@ def validate_ticket():
 
 if __name__ == '__main__':
     with app.app_context():
-        # If models changed, run once:
-        # rm tickets.db
         setup_db()
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5050)))
+    app.run(
+        debug=True,
+        host='0.0.0.0',
+        port=int(os.environ.get("PORT", 5050))
+    )
