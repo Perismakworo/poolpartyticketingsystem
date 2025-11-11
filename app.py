@@ -280,7 +280,7 @@ def setup_db():
         db.session.add(e)
         db.session.commit()
 
-        tt1 = TicketType(event_id=e.id, name='Regular', price=100, total_quantity=70)
+        tt1 = TicketType(event_id=e.id, name='Regular', price=1000, total_quantity=70)
         tt2 = TicketType(event_id=e.id, name='VIP', price=1500, total_quantity=250)
         db.session.add_all([tt1, tt2])
         db.session.commit()
